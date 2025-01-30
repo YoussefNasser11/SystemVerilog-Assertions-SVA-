@@ -1,0 +1,122 @@
+module sequence_operators;
+
+  logic a_clk;
+  logic b_enable;
+  logic c_Sig1;
+  logic c_Sig2;
+  logic c_Sig3;
+  logic c_Sig4;
+
+
+
+
+  always #5 a_clk = ~ a_clk;
+
+  default clocking my_clk @(posedge a_clk);
+  endclocking
+
+
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+
+    a_clk 	    = 0;
+    b_enable    = 0;
+    c_Sig1      = 0;
+    c_Sig2      = 0;
+    c_Sig3      = 0;
+    c_Sig4      = 0;
+
+    @(posedge a_clk);
+    b_enable = 1;
+    @(posedge a_clk);
+    b_enable = 0;
+    c_Sig3   = 1;
+    @(posedge a_clk);
+    c_Sig1   = 1;
+    c_Sig3   = 0;
+    @(posedge a_clk);
+    c_Sig2   = 1; // Seq_F done
+    c_Sig2   = 0;
+    c_Sig4   = 1; // Seq_G done
+    @(posedge a_clk);
+    c_Sig2   = 0;
+    c_Sig4   = 0;
+
+    repeat (20) @(posedge a_clk);
+    $stop;
+  end
+
+  sequence Seq_F;
+    c_Sig1 ##1 c_Sig2;
+  endsequence
+
+  sequence Seq_G;
+    c_Sig3 ##2 c_Sig4;
+  endsequence
+
+  property anding;
+    b_enable |=> (Seq_F and Seq_G);  // 
+  endproperty
+
+  property oring;
+    b_enable |=> (Seq_F or Seq_G);  // 
+  endproperty
+
+  property intersection;
+    b_enable |=> (Seq_F intersect Seq_G);  // 
+  endproperty
+
+
+
+  and_ing : assert property(anding)
+  $display ("\033[32m anding assertion passed @%0t", $time);
+  else
+    $display ("\033[31m anding assertion failed @%0t", $time);
+
+  or_ing : assert property (oring)
+  $display ("\033[32m oring assertion passed @%0t", $time);
+  else
+    $display ("\033[31m oring assertion failed @%0t", $time);  
+    
+  intersect_ing : assert property (intersection)
+  $display ("\033[32m intersection assertion passed @%0t", $time);
+  else
+    $display ("\033[31m intersection assertion failed @%0t", $time);
+
+endmodule
+    
+    /*
+
+sequence operator and vs &&
+
+b_enable |=> (Seq_F && Seq_G);  is wrong
+b_enable |=> (Seq_F and Seq_G); is true 
+
+sequence operator or vs || 
+
+b_enable |=> (Seq_F || Seq_G);  is wrong
+b_enable |=> (Seq_F or Seq_G); is true 
+
+not it's or , and not OR , AND !!
+
+
+Note and they must start in the same cycle but no need to end in the same cycle
+Note intersect they must start in the same cycle and must end in the same cycle
+Note  oring , one of the sequence must be true in order the assertion to pass
+
+scnario 1
+
+if sequence F start after sequence g , both and and intesect will fail 
+because they have different start
+
+scnario 2
+
+if sequence F length not equal to the same length of sequence G 
+and they have same start but different end
+and will pass , intersect will fail
+
+intserct usage to catch ranges say we have seq [0:2] another one [0:2] in the design
+if seq1 takes 1 clk then seq2 must follow it
+
+*/
