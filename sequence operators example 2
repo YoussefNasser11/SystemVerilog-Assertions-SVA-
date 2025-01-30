@@ -1,0 +1,106 @@
+/*
+2. Write an assertion for the following specification:
+
+	A sequence beginning with STRT, followed by 6 consecutive occurrences
+	of PUSH, during which KILL does not occur, must be followed by 6
+	nonconsecutive occurrences of POP before STOP can occur.
+    
+*/
+module sequence_operators;
+
+  logic a_clk;
+  
+  logic b_enable;
+  
+  logic STRT;
+  logic PUSH;
+  logic KILL;
+  logic POP;
+  logic STOP;
+  
+
+  always #5 a_clk = ~ a_clk;
+
+  default clocking my_clk @(posedge a_clk);
+  endclocking
+
+  
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+    a_clk 	    = 0;
+    repeat (30) @(posedge a_clk);
+    $stop;
+  end
+  
+  
+  
+  initial begin
+    b_enable = 0;
+    STRT  = 0;
+    PUSH = 0;
+    POP = 0;
+    KILL  = 0;
+    STOP = 0;
+    
+    @(posedge a_clk);
+    b_enable = 1;
+    
+    @(posedge a_clk);
+    b_enable = 0;
+    STRT = 1;
+    
+    @(posedge a_clk);
+    STRT = 0;
+    PUSH = 1;
+    KILL = 0;
+    repeat (6) @(posedge a_clk);
+    
+    POP = 1;
+    repeat (4) @(posedge a_clk);
+    POP = 0;
+    @(posedge a_clk);
+    POP = 1;
+    repeat (2) @(posedge a_clk);
+    
+    POP  = 0;
+    STOP = 1;
+    @(posedge a_clk);
+    STOP = 0;
+    
+  end
+  
+    
+  sequence sol1;
+    STRT ##1 (PUSH [*6] and !KILL) ##1 (!STOP throughout POP [->6]);
+  endsequence
+
+  sequence sol2;
+    STRT ##1 (!KILL throughout PUSH [*6]) ##1 (!STOP throughout POP [->6]);
+  endsequence
+  
+  property sol3;
+     STRT ##1 (PUSH && !KILL)[*6] |=> !STOP throughout POP[->6];
+  endproperty
+  
+        
+  q2_sol1 : assert property(b_enable |=> sol1 )
+  $display ("\033[32m sol1 assertion passed @%0t", $time);
+  else
+  $display ("\033[31m sol1 assertion failed @%0t", $time);
+             
+             
+             
+  q2_sol2 : assert property(b_enable |=> sol2 )
+  $display ("\033[32m sol2 assertion passed @%0t", $time);
+  else
+  $display ("\033[31m sol2 assertion failed @%0t", $time);
+    
+    
+  q2_sol3 : assert property(b_enable |=>  sol3 )
+  $display ("\033[32m sol3 assertion passed @%0t", $time);
+  else
+  $display ("\033[31m sol3 assertion failed @%0t", $time);
+
+    
+endmodule
