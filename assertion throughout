@@ -1,0 +1,128 @@
+module assertion_throughout;
+
+  bit  		  a_clk  ;
+  logic 	  b_Reset;
+  logic 	  c_GntA ;
+  logic 	  c_GntB ;
+  logic 	  d_Busy ;
+  logic  	  e_DRdy ; 
+  logic 	  f_Done ;
+
+
+  always #5 a_clk = ~ a_clk;
+
+  default clocking my_a_clk @(posedge a_clk);
+  endclocking
+
+
+  property tst_cvr_ex1;
+    (c_GntA || c_GntB) ##[1:10] (d_Busy throughout e_DRdy[*1:3]) ##0 f_Done ;
+  endproperty
+
+
+  property tst_cvr_ex2;
+    (c_GntA || c_GntB) ##1 (d_Busy throughout b_Reset[->1] ##2 f_Done) ;
+  endproperty
+
+  C4 : cover property (tst_cvr_ex1);
+
+  C6 : cover property (tst_cvr_ex2);
+
+    initial begin
+      $dumpfile("waveform.vcd");
+      $dumpvars;
+      #600 $stop;
+    end
+
+    initial begin
+      // =============================================
+      //initi
+      b_Reset=0;
+      c_GntA =0;
+      c_GntB =0;
+      d_Busy =0;
+      e_DRdy =0; 
+      f_Done =0;
+
+      // =============================================
+      //ex1 stimulus
+            #10;
+            c_GntA = 1;
+            #10;
+            c_GntA = 0;
+            d_Busy = 1;
+            e_DRdy = 1;
+            #10;
+            f_Done = 1;
+            #10;
+            d_Busy = 0;
+            e_DRdy = 0;
+            f_Done = 0;
+      
+      #200;
+      
+      //=============================================
+            //initi
+      b_Reset=0;
+      c_GntA =0;
+      c_GntB =0;
+      d_Busy =0;
+      e_DRdy =0; 
+      f_Done =0;
+
+      // =============================================
+      //ex2 stimulus
+      #10;
+      c_GntA = 1;
+      #10;
+      c_GntA = 0;
+      d_Busy = 1;
+      #20;
+      b_Reset =1;
+      #10;
+      b_Reset =0;
+      #10;
+      f_Done = 1;
+      #10;
+      d_Busy = 0;
+      f_Done = 0;
+
+    end
+
+    endmodule
+
+    
+    /*
+
+============================= ex1 ==============================
+
+d_Busy throughout e_DRdy[*1:3]
+
+throughout new <3
+
+it means that busy must be 1 at any cycle from 1:3 of DRdy is 1
+
+note:
+d_Busy throughout e_DRdy[*2]
+
+means that busy must stay high during the 2  repeated DRdy
+
+
+
+============================= ex2 ==============================
+
+(d_Busy throughout b_Reset[->1]) ;
+
+busy must be 1 while reset is 1
+it will  miss when reset did not come with busy 
+
+
+(d_Busy throughout b_Reset[->1]) ##2 f_Done ;
+this means that busy must be 1 during reset is 1 and done will be 1 in 2 cycles later from the reset is 1
+if not it will missed , so here it can be hit or not
+
+(d_Busy throughout b_Reset[->2]) ;
+busy must be high during 2 resets
+if reset did not come twice it will miss
+
+*/
