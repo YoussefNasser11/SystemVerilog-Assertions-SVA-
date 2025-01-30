@@ -1,0 +1,71 @@
+module test_followed_by;
+  
+  bit a_clk, B,C,D,E,F;
+  
+  default clocking yoyo @(posedge a_clk);
+  endclocking : yoyo
+  
+  always #5 a_clk = ~ a_clk;
+  
+  property first;
+    B |=> C ;
+  endproperty
+  
+  property second;
+    D |=> E   ;
+ endproperty
+  
+    
+
+          
+  iff_test : assert property (first iff second)
+    $info ("\033[32m [%0t] iff_test assertion pass",$time); 
+    else
+    $error ("\033[31m iff_test assertion failed @%0t", $time);
+ 
+     
+    
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+  end
+    
+    
+  initial begin
+                                  
+    @(negedge a_clk); {B,C,D,E}  <= 4'b1_0_1_0; // .. @ 15ns 
+    
+    @(negedge a_clk); {B,C,D,E}  <= 4'b0_0_0_0; // .. @ 25ns 
+    @(negedge a_clk); {B,C,D,E}  <= 4'b0_0_0_0; // .. @ 35ns 
+    
+    @(negedge a_clk); {B,C,D,E}  <= 4'b0_0_0_0; // .. @ 45ns 
+    
+repeat(2) @(posedge a_clk);$finish(2);
+    
+  end
+          
+          
+endmodule 
+
+    
+    /*
+
+  property first;
+    B |=> C ;
+  endproperty
+  
+  property second;
+    D |=> E   ;
+ endproperty
+
+
+iff operator
+
+logic : first implies second and second implies first (and 1)?!?!?!?!
+
+passes if  Either both are true or neither of them are (it passes twice at the same cycle because each one implies the other)
+
+it passes every clock cycle and fails if enable holds while fulfill fails
+
+*/
+
