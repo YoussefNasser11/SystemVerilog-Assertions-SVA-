@@ -1,0 +1,113 @@
+module mod_until;
+
+  bit a_clk;
+  bit B,C,D;
+
+  initial repeat(40) #5 a_clk = ~ a_clk;
+
+  default clocking my_clk @(posedge a_clk);
+  endclocking
+
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+    #210;
+    $finish;
+  end
+
+
+  initial begin
+	// test case until  C is required to be true every cycle until D is true
+    @(negedge a_clk); {B,C,D}  <= 3'b0_0_0; // 15 ns
+    @(negedge a_clk); {B,C,D}  <= 3'b1_0_0; // 25 ns
+    @(negedge a_clk); {B,C,D}  <= 3'b0_1_0; // 35 ns
+    @(negedge a_clk); {B,C,D}  <= 3'b0_1_0; // 45 ns
+    @(negedge a_clk); {B,C,D}  <= 3'b0_1_0; // 55 ns
+    @(negedge a_clk); {B,C,D}  <= 3'b0_1_1; // 65 ns
+ 
+
+  end
+  
+  property P_UNTIL_NOVRLP_W;
+    B |=> (C until D);
+  endproperty
+
+  property P_UNTIL_NOVRLP_W_SEQ;
+    B |=> (C[*] ##1 D);
+  endproperty
+
+  property P_UNTIL_OVRLP_W;
+    B |=> (C until_with D);
+  endproperty
+
+  property P_UNTIL_OVRLP_W_SEQ;
+    B |=> (C[+] ##0 D);
+  endproperty
+  
+  until_prop : assert property (P_UNTIL_NOVRLP_W)
+    $info ("\033[32m  until assertion passed @%0t", $time);
+  else
+    $error ("\033[31m until assertion failed @%0t", $time);
+
+  until_prop_eqv : assert property (P_UNTIL_NOVRLP_W_SEQ)
+    $info ("\033[32m  until_eqv assertion passed @%0t", $time);
+  else
+    $error ("\033[31m until_eqv assertion failed @%0t", $time);
+
+  until_wth_prop : assert property (P_UNTIL_OVRLP_W)
+    $info ("\033[32m  until_wth assertion passed @%0t", $time);
+  else
+    $error ("\033[31m until_wth assertion failed @%0t", $time);
+
+  until_wth_prop_eqv : assert property(P_UNTIL_OVRLP_W_SEQ)
+    $info ("\033[32m  until_wth_eqv assertion passed @%0t", $time);
+  else
+    $error ("\033[31m until_wth_eqv assertion failed @%0t", $time);
+
+endmodule
+    
+    /*
+
+sequence can not include until keyword
+until is working only with properties
+
+c until D means
+C is required to be true every cycle until D is true
+
+equaivlent to (C[*] ##1 D);  , note * means from 0 to $
+
+
+scnario0 : B , next clk cycle !C , D 
+successs
+
+scnario1 : B , next clk cycle C , next clk cycle C , next clk cycle D
+successs
+
+scnario2 : B , next clk cycle C , next clk cycle C , next clk cycle c , D together
+successs
+
+scnario3 : B , next clk cycle C , next clk cycle C , next clk cycle c simulation finish
+incomplete "weak"
+
+scnario4 : B , next clk cycle C , next clk cycle C , next clk cycle !c simulation finish
+fail
+
+
+
+c until_with D means
+C is required to be true every cycle until D is true, including
+the cycle D becomes true
+
+equaivlent to (C[+] ##0 D);
++ so at least one cycle of C is done , ##0 is overlapping <3
+
+scnario1 : B , next clk cycle C , next clk cycle C , next clk cycle D
+fail
+
+scnario2 : B , next clk cycle C , next clk cycle C , next clk cycle c , D together
+pass
+
+scnario3 : B , next clk cycle C , next clk cycle C , next clk cycle c simulation finish
+incomplete "weak"
+
+*/
