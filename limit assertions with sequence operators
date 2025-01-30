@@ -1,0 +1,116 @@
+module sequence_operators;
+
+  logic a_clk;
+  logic b_enable;
+  logic c_Sig1;
+  logic c_Sig2;
+  logic c_Sig3;
+  logic c_Sig4;
+  logic DPULSE;
+  logic START;
+  logic POP;
+
+ 
+  
+  always #5 a_clk = ~ a_clk;
+
+  default clocking my_clk @(posedge a_clk);
+  endclocking
+
+
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+
+    a_clk 	    = 0;
+    
+//     c_Sig1      = 0;
+//     c_Sig2      = 0;
+//     c_Sig3      = 0;
+//     c_Sig4      = 0;
+//     DPULSE      = 0;
+
+//     @(posedge a_clk);
+//     b_enable = 1;
+//     @(posedge a_clk);
+//     b_enable = 0;
+//     c_Sig3   = 1;
+//     @(posedge a_clk);
+//     c_Sig1   = 1;
+//     c_Sig3   = 0;
+//     @(posedge a_clk);
+//     c_Sig2   = 1; // Seq_F done
+//     c_Sig2   = 0;
+//     c_Sig4   = 1; // Seq_G done
+//     @(posedge a_clk);
+//     c_Sig2   = 0;
+//     c_Sig4   = 0;
+  end
+  
+  initial begin
+    repeat (30) @(posedge a_clk);
+    $stop;
+  end
+  
+  initial begin
+    b_enable    = 0;
+    DPULSE 		= 0;
+    @(posedge a_clk);
+    b_enable    = 1;
+    @(posedge a_clk);
+    b_enable    = 0;
+    DPULSE      = 1;
+    repeat (3) @(posedge a_clk);
+    DPULSE    = 0;
+    @(posedge a_clk);
+    repeat (9) @(posedge a_clk); // clock number 14 before the limitwhich is 15
+    DPULSE    = 1;
+  end
+
+  	
+  initial begin
+    START = 0;
+    POP   = 0;
+    @(posedge a_clk);
+    START = 1;
+    @(posedge a_clk);
+    START = 0;
+    @(posedge a_clk);
+    POP   = 1;
+  end
+  
+  test_pop: assert property(START |=> POP[->1] intersect 1'b1[*1]) // solcing incomplete to be pass or fail with limition :)
+    $display ("\033[32m test_pop assertion passed @%0t", $time);
+  else
+    $display ("\033[31m test_pop assertion failed @%0t", $time);
+  
+  property limit;
+    b_enable |=> ((DPULSE[=4:8]) intersect (1'b1[*15])); 
+  endproperty
+
+//   property oring;
+//     b_enable |=> (Seq_F or Seq_G);  // 
+//   endproperty
+
+
+
+
+  limition : assert property(limit)
+  $display ("\033[32m limit assertion passed @%0t", $time);
+  else
+    $display ("\033[31m limit assertion failed @%0t", $time);
+
+//   or_ing : assert property (oring)
+//   $display ("\033[32m oring assertion passed @%0t", $time);
+//   else
+//     $display ("\033[31m oring assertion failed @%0t", $time);  
+    
+endmodule
+    
+    /*
+
+Nonconsecutive repetition is used to look for 4 to 8 occurrences of DPULSE. Nonconsecutive
+repetition is open-ended, but the sequence is matched to a cycle count of 15 using length matching
+and to put a cycle limit on the occurrences of DPULSE.
+
+*/
