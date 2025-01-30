@@ -1,0 +1,63 @@
+/*
+
+difference between implies operator and |=>
+
+implies work concurruently while |=> work sequentially
+
+*/
+
+module test_imp;
+  
+  bit a_clk, C,D,E,F;
+  
+  default clocking yoyo @(posedge a_clk);
+  endclocking : yoyo
+  
+  always #5 a_clk = ~ a_clk;
+  
+  property parallel_imp;
+    (C ##1 E) implies (D |=> F);
+  endproperty
+
+  property sequtnial_imp;
+    (C ##1 E) |=> (D |=> F);   // NEVER EVER DO THIS
+  endproperty
+  
+      paralllel_imp : assert property (parallel_imp)
+    $info ("\033[32m [%0t] parallel_imp assertion pass",$time);
+    else
+      $error ("\033[31m parallel_imp assertion failed @%0t", $time); 
+    
+        sequtniial_imp : assert property (sequtnial_imp)
+    $info ("\033[32m [%0t] sequtniial_imp assertion pass",$time); 
+    else
+      $error ("\033[31m sequtniial_imp assertion failed @%0t", $time);
+ 
+     
+    
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+  end
+    
+    
+  initial begin
+                                  
+    @(negedge a_clk); {C,D,E,F}  <= 4'b0_0_0_0; // .. @ 15ns // implies fail/vacous pass  , |=> vacous pass
+    
+    @(negedge a_clk); {C,D,E,F}  <= 4'b1_1_0_0; // .. @ 25ns // implies enabled , |=> enabled
+    @(negedge a_clk); {C,D,E,F}  <= 4'b0_0_1_1; // .. @ 35ns // implies pass    , |=>  pass
+    
+    @(negedge a_clk); {C,D,E,F}  <= 4'b1_0_0_0; // .. @ 45ns // implies fail    , |=> enabled
+    @(negedge a_clk); {C,D,E,F}  <= 4'b0_0_1_0; // .. @ 55ns // implies fail    , |=> vacous pass
+    @(negedge a_clk); {C,D,E,F}  <= 4'b0_0_0_0; // .. @ 65ns // implies fail    , |=> vacous pass
+    @(negedge a_clk); {C,D,E,F}  <= 4'b0_0_0_1; // .. @ 75ns // implies fail    , |=> pass
+    
+    @(negedge a_clk); {C,D,E,F}  <= 4'b0_0_0_0; // .. @ 85ns // vacous pass    , |=> vacous pass
+    
+repeat(2) @(posedge a_clk);$finish(2);
+    
+  end
+          
+          
+endmodule 
