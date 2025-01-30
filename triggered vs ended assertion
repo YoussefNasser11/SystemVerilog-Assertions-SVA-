@@ -1,0 +1,101 @@
+`define true 1
+module sequence_operators;
+
+  bit a_clk;
+  bit req,s_ack;
+  bit A;
+
+  initial repeat(10) #5 a_clk = ~ a_clk;
+
+  default clocking my_clk @(posedge a_clk);
+  endclocking
+
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+  end
+
+  initial begin
+    // WE WILL NOT control @5ns because clock start with 0 not 1
+    
+    @(negedge a_clk); {req,s_ack,A}  <= 3'b1_0_1; // .. @ 15ns
+    @(negedge a_clk); {req,s_ack,A}  <= 3'b0_1_0; // .. @ 25ns
+    @(negedge a_clk); {req,s_ack,A}  <= 3'b0_0_1; // .. @ 35ns
+    @(negedge a_clk); {req,s_ack,A}  <= 3'b0_0_0; // .. @ 45ns
+    
+  end
+
+//   always @(posedge a_clk)
+//     begin
+//       wait(EP2.triggered);
+//       $display("033[33m 2 cycles after handshake");
+//     end
+  
+  sequence EP2;
+    (req ##1 s_ack ##2 `true);
+  endsequence
+
+  property SEQ_DIS;
+    @(posedge a_clk) disable iff (EP2.triggered)
+    $rose(A);
+  endproperty
+  
+  trig_ex1 : assert property (SEQ_DIS)
+  $info ("\033[32m trig_ex1 SEQ_DIS assertion passed @%0t", $time);
+  else
+    $error ("\033[31m trig_ex1 SEQ_DIS assertion failed @%0t", $time);
+
+endmodule
+    
+    /*
+
+triggered vs ended
+triggered used in assertions and procedule bloccks and disable statment while ended not.
+ended is not exist any more last time exist at sv2009 , some tool support it because they have IPs with legacy codes.
+
+
+● True from observe timeslot until simulation time
+advances
+● Can be used in an assertion
+● Can be used to disable an assertion
+● Can be used in procedural cod
+
+'define true 1
+sequence EP2; (req ##1 ack ##2 'true);
+endsequence
+
+
+  property SEQ_DIS;
+    @(posedge a_clk) disable iff (EP2.triggered)
+    $rose(A)
+  endproperty
+  
+  A = 0 -> A = 1
+  A = X -> A = 1
+  A = Z -> A = 1
+  
+@0   ns  A = 0  -   | req = 0 , ack = 0  not trig
+@5   ns  A = 0 FAIL | req = 0 , ack = 0  not trig
+@15  ns  A = 1 PASS | req = 1 , ack = 0  not trig
+@25  ns  A = 0 FAIL | req = 0 , ack = 1  not trig
+@35  ns  A = 1 PASS | req = 0 , ack = 0  not trig
+@45  ns  A = 0 FAIL | req = 0 , ack = 0    trig     --> ignore failliure  @45ns
+
+		[Seq Trigger Disabled the Property]
+        
+@55  ns  A = 0 FAIL | req = 0 , ack = 0
+@65  ns  A = 0 FAIL | req = 0 , ack = 0
+@75  ns  A = 0 FAIL | req = 0 , ack = 0
+@85  ns  A = 0 FAIL | req = 0 , ack = 0
+@95  ns  A = 0 FAIL | req = 0 , ack = 0
+
+log 
+
+@5ns fail , @25 fail
+@15  pass , @35 pass
+  note @45 --> trig dissballed the property so it will suspeneded so no 
+  
+  reference 
+  https://circuitcove.com/system-tasks-format-spec/
+  
+*/
