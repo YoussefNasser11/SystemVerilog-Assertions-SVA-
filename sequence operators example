@@ -1,0 +1,103 @@
+/*1-Write sequences to describe the following properties:
+		
+        a. 4 nonconsecutive occurrences of PULSE in 10 cycles
+		b. GO is followed by either ERR or 3 to 7 consecutive cycles of ENB
+        */
+module sequence_operators;
+
+  logic a_clk;
+  logic PULSE;
+  logic b_enable;
+  logic GO;
+  logic ERR;
+  logic ENB;
+  
+
+  always #5 a_clk = ~ a_clk;
+
+  default clocking my_clk @(posedge a_clk);
+  endclocking
+
+
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+    a_clk 	    = 0;
+  end
+  
+  initial begin
+    repeat (30) @(posedge a_clk);
+    $stop;
+  end
+  
+//   initial begin
+//     b_enable    = 0;
+//     PULSE 		= 0;
+//     @(posedge a_clk);
+//     repeat (3) @(posedge a_clk);
+//   end
+  
+  initial begin
+     PULSE       = 0;
+     b_enable    = 0;
+    @(posedge a_clk);
+     b_enable    = 1;
+    @(posedge a_clk);
+    b_enable    = 0;
+    repeat (4) begin
+      PULSE = 1;
+       @(posedge a_clk);
+    end
+    PULSE = 1'bx ;
+  end
+  
+  
+  initial begin
+     GO  = 0;
+     ERR = 0;
+     ENB = 0;
+    
+    @(posedge a_clk);
+    GO  = 1;
+    
+    @(posedge a_clk);
+    GO  = 0;
+    ENB  = 1;
+    repeat (5)  @(posedge a_clk);
+    ENB  = 0;
+    @(posedge a_clk);
+  end
+  
+  
+  
+  
+  sequence seq1;
+    PULSE[=4] within (1'b1[*10]); 
+  endsequence
+  
+  sequence seq2;
+    PULSE[=4] intersect (1'b1[*10]); // WILL NOT WORK DUE TO Length Mismatch
+    
+  endsequence
+
+    sequence seq3;
+      GO ##1 (ERR or ENB[*3:7]);
+    endsequence
+
+
+  pulse_assertion1 : assert property(b_enable |=> seq1 )
+    $display ("\033[32m pulse assertion1 passed @%0t", $time);
+  else
+    $display ("\033[31m pulse assertion1 failed @%0t", $time);
+    
+    pulse_assertion2 : assert property(b_enable |=> seq2 )
+      $display ("\033[32m pulse assertion2 passed @%0t", $time);
+  else
+    $display ("\033[31m pulse assertion2 failed @%0t", $time);
+
+      GO_ERR : assert property(b_enable |-> seq3 )
+    $display ("\033[32m GO_ERR assertion passed @%0t", $time);
+  else
+    $display ("\033[31m GO_ERR assertion failed @%0t", $time);
+ 
+endmodule
