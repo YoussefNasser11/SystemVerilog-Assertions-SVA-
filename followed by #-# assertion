@@ -1,0 +1,44 @@
+module test_followed_by;
+  
+  bit clk, a, b;
+  
+  default clocking dcb @(posedge clk);
+  endclocking : dcb
+  
+  always #5 clk = ~clk;
+  
+  c_followed_by : cover property (a #-# b) begin
+    $info ("\033[32m [%0t] c_followed_by pass",$time); end
+    
+    c_imp : cover property (a |-> b) begin
+    $info ("\033[32m [%0t] c_imp pass",$time); end
+    
+      a_followed_by : assert property (a #-# b)
+    $info ("\032[32m [%0t] a_followed_by assertion pass",$time);
+    else
+      $error ("\033[31m a_followed_by assertion failed @%0t", $time); 
+    
+        a_imp : assert property (a |-> b)
+    $info ("\032[32m [%0t] a_imp assertion pass",$time); 
+    else
+      $error ("\033[31m a_imp assertion failed @%0t", $time);
+ 
+     
+    
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+  end
+    
+    
+  initial begin
+    								  // .. @ 5 ns // fail #=# , |=> vacous pass
+    @(negedge clk); {a,b}  <= 2'b0_0; // .. @ 15ns // fail #=# , |=> vacous pass
+    @(negedge clk); {a,b}  <= 2'b1_1; // .. @ 25ns // pass #=# , |=>  pass
+    @(negedge clk); {a,b}  <= 2'b1_0; // .. @ 35ns // fail #=# , |=>  fail
+    @(negedge clk); {a,b}  <= 2'b1_1; // .. @ 45ns // pass #=# , |=>  pass
+    @(posedge clk);
+    @(posedge clk);
+   $finish(2);
+  end
+endmodule : test_followed_by
