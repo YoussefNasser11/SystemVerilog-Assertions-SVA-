@@ -1,0 +1,138 @@
+module sequence_operators;
+
+  logic a_clk;
+
+  logic A;
+  logic B;
+  logic ENAB;
+  logic D;
+  logic E;
+  logic F;
+  
+
+
+  always #5 a_clk <= ~ a_clk;
+
+  default clocking my_clk @(posedge a_clk);
+  endclocking
+	 
+  task en;
+    ENAB        = 0;
+    @(posedge a_clk);
+    ENAB        = 1;
+    @(posedge a_clk);
+    ENAB        = 0;
+  endtask
+
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+    a_clk 	    = 0;
+	en;
+  end
+
+  initial begin
+    repeat (30) @(posedge a_clk);
+    $stop;
+  end
+
+  initial begin
+    A    =0;
+    B    =0;
+    @(posedge a_clk);
+    @(posedge a_clk);
+	A    =1;
+    @(posedge a_clk);
+	A    =0;
+    B    =1;
+    @(posedge a_clk);
+	B    =0;
+  end
+
+  initial begin
+    D    =0;
+    E    =0;
+    F    =0;
+    @(posedge a_clk);
+    @(posedge a_clk);
+    D    =1;
+    E    =0;
+    F    =0;
+    @(posedge a_clk);
+    D    =0;
+    E    =1;
+    @(posedge a_clk);
+    D    =0;
+    E    =0;
+    F    =1;
+    @(posedge a_clk);
+    F    =0;
+  end
+
+  sequence SAB;
+    (A ##1 B);
+  endsequence
+
+  sequence SDEF;
+    (D ##1 E ##1 F);
+  endsequence
+  
+  property S13;
+    ENAB |=> (SAB) within (SDEF);
+  endproperty
+  
+  property equ;
+    ENAB |=>  (1[*0:$] ##1 SAB ##1 1[*0:$]) intersect (SDEF);
+    /*
+    . a sequence composed of any number of cycles (including zero) followed by SEQA followed in turn by any number of cycles (including zero) is length matched (intersect) with SEQB.
+    */
+  endproperty
+
+  TRH_OUT : assert property(S13)
+    $display ("\033[32m S13 assertion passed @%0t", $time);
+    else
+      $display ("\033[31m S13 assertion failed @%0t", $time);
+    
+  eqaiv : assert property(equ)
+    $display ("\033[32m equ assertion passed @%0t", $time);
+    else
+      $display ("\033[31m equ assertion failed @%0t", $time);
+    
+    
+endmodule
+    
+    /*
+Eng.Youssef Nasser
+
+passing condition only
+--------------pass-------------
+● SEQAB begins    at or after  SEQDEF begins
+● SEQAB completes at or before SEQDEF ends
+--------------pass-------------
+
+SCN1:
+SEQAB START @same time SEQDEF START , SEQAB FINISH @same time SEQDEF FINISH 
+
+"PASS"
+
+SCN2:
+SEQAB START @same time SEQDEF START , SEQAB FINISH BEFORE SEQDEF FINISH
+
+"PASS"
+
+SCN3:
+SEQAB START AFTER  SEQDEF START , SEQAB FINISH BEFORE SEQDEF FINISH
+
+"PASS"
+
+SCN4:
+SEQAB START AFTER  SEQDEF START , SEQAB FINISH @same time SEQDEF FINISH
+
+"PASS"
+
+SCN5-8: fail!!
+SEQAB START AFTER  SEQDEF START , SEQAB FINISH AFTER SEQDEF FINISH 
+SEQAB START BEFORE  SEQDEF START , SEQAB FINISH @same time SEQDEF FINISH
+SEQAB START @same time  SEQDEF START , SEQAB FINISH AFTER SEQDEF FINISH
+SEQAB START BEFORE  SEQDEF START , SEQAB FINISH before SEQDEF start
+*/
