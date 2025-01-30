@@ -1,0 +1,102 @@
+module mod12_until;
+
+  bit a_clk;
+  bit B,C,D;
+
+  initial repeat(40) #5 a_clk = ~ a_clk;
+
+  default clocking my_clk @(posedge a_clk);
+  endclocking
+
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+    #210;
+    $finish;
+  end
+
+
+  initial begin
+	// test case until  C is required to be true every cycle until D is true
+    @(negedge a_clk); {B,C,D}  <= 3'b0_0_0; // 15 ns
+    @(negedge a_clk); {B,C,D}  <= 3'b1_0_0; // 25 ns
+    @(negedge a_clk); {B,C,D}  <= 3'b0_1_0; // 35 ns
+    @(negedge a_clk); {B,C,D}  <= 3'b0_1_0; // 45 ns
+    @(negedge a_clk); {B,C,D}  <= 3'b0_1_0; // 55 ns
+    @(negedge a_clk); {B,C,D}  <= 3'b0_1_0; // 65 ns
+ 
+
+  end
+  
+  property P_UNTIL_NOVRLP_W;
+    B |=> (C s_until D);
+  endproperty
+
+  property P_UNTIL_NOVRLP_W_SEQ;
+    B |=> strong (C[*] ##1 D);
+  endproperty
+
+  property P_UNTIL_OVRLP_W;
+    B |=> (C s_until_with D);
+  endproperty
+
+  property P_UNTIL_OVRLP_W_SEQ;
+    B |=> strong(C[+] ##0 D);
+  endproperty
+  
+  until_prop : assert property (P_UNTIL_NOVRLP_W)
+    $info ("\033[32m  s_until assertion passed @%0t", $time);
+  else
+    $error ("\033[31m s_until assertion failed @%0t", $time);
+
+  until_prop_eqv : assert property (P_UNTIL_NOVRLP_W_SEQ)
+    $info ("\033[32m  s_until_eqv assertion passed @%0t", $time);
+  else
+    $error ("\033[31m s_until_eqv assertion failed @%0t", $time);
+
+  until_wth_prop : assert property (P_UNTIL_OVRLP_W)
+    $info ("\033[32m  s_until_wth assertion passed @%0t", $time);
+  else
+    $error ("\033[31m s_until_wth assertion failed @%0t", $time);
+
+  until_wth_prop_eqv : assert property(P_UNTIL_OVRLP_W_SEQ)
+    $info ("\033[32m  s_until_wth_eqv assertion passed @%0t", $time);
+  else
+    $error ("\033[31m s_until_wth_eqv assertion failed @%0t", $time);
+
+endmodule
+    
+    /*
+
+sequence can not include until keyword
+until is working only with properties
+
+until      is weak , s_until      is strong
+until_with is weak , s_until_with is strong
+
+c s_until D means
+C is required to be true every cycle until D is true
+
+equaivlent to strong (C[*] ##1 D);  , note * means from 0 to $
+
+
+
+
+scnario3 : B , next clk cycle C , next clk cycle C , next clk cycle c simulation finish
+fail
+
+
+
+
+c s_until_with D means
+C is required to be true every cycle until D is true, including
+the cycle D becomes true
+
+equaivlent to strong (C[+] ##0 D);
++ so at least one cycle of C is done , ##0 is overlapping <3
+
+scnario3 : B , next clk cycle C , next clk cycle C , next clk cycle c simulation finish
+fail
+
+
+*/
