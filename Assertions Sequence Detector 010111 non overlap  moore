@@ -1,0 +1,211 @@
+`define formal
+module Sequence_DET  (input wire clk,
+                      input wire rst_n,       
+                      input wire SEQ_Input,   
+                      output reg SEQ_Detect); 
+
+  // interface state machine states
+
+  typedef enum reg [2:0] {S0,S1,S2,S3,S4,S5,S6} fsm_state;
+  fsm_state current_state , next_state;
+
+
+
+  // state machine for interface control 
+
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (~rst_n)
+      current_state <= S0;
+    else
+      current_state <= next_state;
+  end
+
+  always_comb begin
+
+    case (current_state)
+      S0:
+        begin
+          if(SEQ_Input)
+            next_state = S0;
+          else
+            next_state = S1;
+        end
+      S1:
+        begin
+          if(SEQ_Input)
+            next_state = S2;
+          else
+            next_state = S1;
+        end
+      S2:
+        begin
+          if(SEQ_Input)
+            next_state = S0;
+          else
+            next_state = S3;
+        end
+      S3:
+        begin
+          if(SEQ_Input)
+            next_state = S4;
+          else
+            next_state = S1;
+        end
+      S4:
+        begin
+          if(SEQ_Input)
+            next_state = S5;
+          else
+            next_state = S1;
+        end
+      S5:
+        begin
+          if(SEQ_Input)
+            next_state = S6;
+          else
+            next_state = S1;
+        end
+      S6:
+        begin
+          if(SEQ_Input)
+            next_state = S0;
+          else
+            next_state = S1;
+        end
+      default: begin
+        $display("error state");
+      end
+    endcase
+
+  end
+  always_comb
+    begin
+      case (current_state)
+        S0:
+          begin
+            SEQ_Detect = 0;
+          end
+        S1:
+          begin
+            SEQ_Detect = 0;
+          end
+        S2:
+          begin
+            SEQ_Detect = 0;
+          end
+        S3:
+          begin
+            SEQ_Detect = 0;
+          end
+        S4:
+          begin
+            SEQ_Detect = 0;
+          end
+        S5:
+          begin
+            SEQ_Detect = 0;
+          end
+        S6:
+          begin
+            SEQ_Detect = 1;
+          end
+
+        default: begin
+
+          $display("error state");
+        end
+      endcase
+    end
+
+  `ifdef formal
+  
+  default clocking my_clk @(posedge clk);
+  endclocking
+  
+  sequence seq;
+    !SEQ_Input ##1 SEQ_Input ##1 !SEQ_Input ##1 SEQ_Input ##1 SEQ_Input ##1 SEQ_Input;
+  endsequence
+  
+  property SIMPLE_SEQ;
+    disable iff (!rst_n)
+    (seq.triggered) |=> SEQ_Detect;
+  endproperty
+
+  c0: cover property ( !SEQ_Input);
+  c1: cover property ( !SEQ_Input ##1 SEQ_Input);
+  c2: cover property ( !SEQ_Input ##1 SEQ_Input ##1 !SEQ_Input);
+  c3: cover property ( !SEQ_Input ##1 SEQ_Input ##1 !SEQ_Input ##1 SEQ_Input);
+  c4: cover property ( !SEQ_Input ##1 SEQ_Input ##1 !SEQ_Input ##1 SEQ_Input ##1 SEQ_Input);
+  c5: cover property ( !SEQ_Input ##1 SEQ_Input ##1 !SEQ_Input ##1 SEQ_Input ##1 SEQ_Input ##1 SEQ_Input );
+ 
+  
+  Assertion1: assert property (SIMPLE_SEQ)
+    $display ("\033[32m assertion passed @%t", $time);
+    else
+      $display ("\033[31m assertion failed @%t", $time);
+    
+    Cov: cover property (SIMPLE_SEQ);
+
+  
+  `endif
+endmodule
+
+module Sequence_tb;
+  //Ports
+  bit  clk;
+  logic  rst_n;
+  logic  SEQ_Input;
+  logic  SEQ_Detect;
+
+  bit [1:0] count;
+
+  reg[9:0] seuqence_i;
+  logic in_queue[$];
+  int i;
+
+  Sequence_DET  Sequence_inst (
+    .clk(clk),
+    .rst_n(rst_n),
+    .SEQ_Input(SEQ_Input),
+    .SEQ_Detect(SEQ_Detect)
+  );
+  always #5  clk = ! clk ;
+
+
+
+  task pop;
+    //if (in_queue.size != 0)
+      SEQ_Input = in_queue.pop_front;
+  endtask
+
+
+  initial begin
+    SEQ_Input = 0;
+    in_queue = {1,0,1,0,1,1,1,0,1,1,0,1,0,1,1,1,0};
+    $display (in_queue);
+    rst_n    = 0;
+    #10;
+    rst_n    = 1;
+    repeat (17) begin
+      @(negedge clk);
+      pop();
+    end
+  end
+
+  initial begin
+    forever begin
+      @(posedge clk);
+      if(SEQ_Detect) begin
+        $display("Sequence is detected");
+        count++;
+      end
+    end
+  end
+  
+  initial begin
+     $dumpfile("waveform.vcd");
+    $dumpvars;
+    #250 $stop;
+  end
+endmodule
