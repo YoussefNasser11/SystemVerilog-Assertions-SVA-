@@ -57,12 +57,49 @@ endmodule
     
     /*
 
-Assume Assert default is weak
+Linear Temporal Logic (LTL) Operators
 
-Restrict Cover default is strong
 
-strong mean lazm y7esl w lw al sismulation 7asl finish msh stop hy3ml error aw miss saw2 assert aw cover
+   property s_eventuallyy;
+     A_Valid |=> B_Start ##0 s_eventually (C_Ack);
+   endproperty
 
-enmaa al weak 3de hyb2a in complete
 
+same as 
+
+property strongg;
+  a |=> strong(b ##[*] C_Ack);
+ endproperty
+
+LTL used in Property Specification Language (PSL)
+
+=======================================================
+Two sequence operators are : weak(), strong().
+
+directives :
+
+assert - weak by default
+assume - weak by default
+
+cover     - strong by default
+restsrict - strong by default
+
+weak causes safety  (bounded time)
+strong causes liveness (unbounded time)
+
+
+weak means incomplete if sim finished before sequence happens (not fail/miss) and it hit/pass if happens
+
+
+strong means fail/miss if sim finished before sequence happens and it hit/pass if happens
+
+weak and strong are usually used in formal verification
+i.e design has 10 FFs so we have 2^10=1024 states
+formal tools knows all possible states without simulating 
+
+in simulation ,we use $finish (instead of $stop) to know the result of using strong/weak keywords.
+
+in VCS , using strong or weak -sv=2009 and the user guide states that , it has limitations that in all cases assertions and covers evaluate as incomplete , the user then defines who passed and failed 
+
+*/
 */
