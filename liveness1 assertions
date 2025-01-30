@@ -1,0 +1,68 @@
+module assertion_liveness;
+  logic A;
+  logic B;
+  logic C;
+  logic a_clk;
+
+  always #5 a_clk = ~ a_clk;
+
+  default clocking my_clk @(posedge a_clk);
+  endclocking
+
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+  end
+
+  initial begin
+    a_clk  = 0;
+    A  = 0;
+    B  = 0;
+    C  = 0;
+    #10;
+    A = 1;
+    #10;
+//     B = 1;
+    A = 0;
+    #10;
+//     B = 0;
+    C = 0;
+    #10;
+    C = 0;
+    #600;
+    $finish;
+  end
+  property Safe_no_weak;
+    A |-> (!C[*] ##0 B);
+  endproperty
+
+  property Safe_weak;
+    A |-> weak(!C[*] ##0 B);
+  endproperty
+  
+  
+  property strongg;
+    A |-> strong(!C[*] ##0 B);
+  endproperty
+  
+  
+  C1: cover  property (Safe_no_weak);
+  A1: assert property (Safe_no_weak);
+  C2: cover  property (Safe_weak);
+  A2: assert property (Safe_weak);
+  C3: cover  property (strongg);
+  A3: assert property (strongg);
+    
+endmodule
+    
+    /*
+
+Assume Assert default is weak
+
+Restrict Cover default is strong
+
+strong mean lazm y7esl w lw al sismulation 7asl finish msh stop hy3ml error aw miss saw2 assert aw cover
+
+enmaa al weak 3de hyb2a in complete
+
+*/
