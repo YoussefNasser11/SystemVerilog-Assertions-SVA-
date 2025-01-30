@@ -1,0 +1,99 @@
+/*
+
+
+● After REQ in one cycle followed by ACK in the next what must then occur is:
+● GNT must be low in the same cycle as ACK, and goes high between 1 and 2 cycles after ACK     goes high
+● Grant should be low all cycles before ACK (extra spec)
+● END must remain low for 5 CLK cycles after GNT as DATA clocked in
+● END then goes high
+
+*/
+
+module assertion_req_ack;
+
+  logic f_END,d_GNT,c_ACK,b_REQ,a_clk;
+  logic [3:0] e_DATA;
+
+  always #5 a_clk = ~a_clk;
+
+  /*
+      For example, if we observe A ##1 B && CLR ##1 !C then the property is deemed to have passed on the cycle where CLR occurre
+      */
+
+  initial begin
+    wait(d_GNT) begin
+      #10;
+      e_DATA = 4'hD;
+      #50;
+      e_DATA = 0;
+    end
+  end
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+    a_clk  = 0;
+    b_REQ  = 0;
+    c_ACK  = 0;
+    d_GNT  = 0;
+    e_DATA = 0;
+    f_END  = 0;
+    #10;
+    b_REQ  = 1;
+    #10;
+    b_REQ  = 0;
+    c_ACK  = 1;
+    #10;
+    c_ACK  = 0;
+    
+    #10;
+    d_GNT  = 1;
+    #10;
+    d_GNT  = 0;
+    #50;
+    f_END = 1;
+    #10;
+    f_END = 0;
+    #50;
+    $stop;
+  end
+
+  sequence s1;
+    $rose(b_REQ);
+  endsequence
+  
+   sequence gnt;
+    !d_GNT && !$past(d_GNT) && !$past(d_GNT,2);
+  endsequence
+
+  sequence s2;
+    $fell(b_REQ) && $rose(c_ACK) ##0 gnt;
+  endsequence
+
+  sequence s3;
+    $fell(c_ACK);
+  endsequence
+
+  sequence s4;
+    s3  ##[0:1] $rose(d_GNT);
+  endsequence
+
+  sequence s5;
+    $fell(d_GNT);
+  endsequence
+
+  sequence s6;
+    !f_END[*4] ##1 $rose(f_END) ##1 $fell(f_END);
+  endsequence
+
+  property Protocol_Sequence;
+    @(posedge a_clk)
+    s1 |=> s2 ##1 s4 ##1 s5 ##1 s6;
+  endproperty
+
+  Non_Cons: assert property (Protocol_Sequence)
+    $display("Passed [%0t]",$time);
+    else
+      $display("FAIL [%0t]",$time);
+
+
+    endmodule
