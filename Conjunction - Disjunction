@@ -1,0 +1,80 @@
+/*
+
+avoid conjunction properties  (property and property)
+
+it causes problem due to testing two properties at the same time
+
+conjunction properties pass if both properties hold true vacously or non vacously
+
+it fails if the enable condition happens and the fulfill fails
+
+*/
+
+
+/*
+
+avoid disjunction properties  (property or property)
+
+it causes problem due to testing two properties at the same time
+
+disjunction properties pass if (either of or both) properties hold true vacously or non vacously
+
+it fails if both of enable conditions happen and both fulfills fail
+
+*/
+
+
+module test_followed_by;
+  
+  bit a_clk, B,C,D,E,F;
+  
+  default clocking yoyo @(posedge a_clk);
+  endclocking : yoyo
+  
+  always #5 a_clk = ~ a_clk;
+  
+  property conj_test;
+    (B |=> C) and (D |=> E ##1 F) ;
+  endproperty
+  
+  property d_conj_test;
+    (B |=> C) or (D |=> E ##1 F)  ;
+ endproperty
+  
+    
+//     conj : assert property (conj_test)
+//     $info ("\033[32m [%0t] conj_test assertion pass",$time); 
+//     else
+//     $error ("\033[31m conj_test assertion failed @%0t", $time);
+          
+    d_conj : assert property (d_conj_test)
+    $info ("\033[32m [%0t] d_conj_test assertion pass",$time); 
+    else
+    $error ("\033[31m d_conj_test assertion failed @%0t", $time);
+ 
+     
+    
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+  end
+    
+    
+  initial begin
+                                  
+    @(negedge a_clk); {B,C,D,E,F}  <= 5'b0_0_0_0_0; // .. @ 15ns 
+    
+    @(negedge a_clk); {B,C,D,E,F}  <= 5'b1_0_1_0_0; // .. @ 25ns 
+    @(negedge a_clk); {B,C,D,E,F}  <= 5'b0_0_0_1_0; // .. @ 35ns 
+    
+    @(negedge a_clk); {B,C,D,E,F}  <= 5'b0_0_0_0_0; // .. @ 45ns 
+    @(negedge a_clk); {B,C,D,E,F}  <= 5'b0_0_0_0_0; // .. @ 55ns 
+
+
+    
+repeat(2) @(posedge a_clk);$finish(2);
+    
+  end
+          
+          
+endmodule 
