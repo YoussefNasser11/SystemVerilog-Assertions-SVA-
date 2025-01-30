@@ -1,0 +1,113 @@
+//generate 
+
+module assertion_array;
+
+  parameter width = 12;
+  
+  logic [width-1:0] c_ACK;
+  logic [width-1:0] b_REQ;
+  logic       a_clk;
+  
+  static int count;
+
+  parameter which_initial = 0;
+  int N;
+
+  default clocking my_clk @(posedge a_clk);
+  endclocking
+
+
+  always #5 a_clk = ~a_clk;
+
+  if(which_initial==0)
+    begin
+      initial begin
+        $dumpfile("waveform.vcd");
+        $dumpvars;
+        a_clk  = 0;
+        b_REQ  = 0;
+        c_ACK  = 0;
+        #10;
+        for(int i=1; i <($bits(c_ACK)+1);i++) // i=1 so we can catch first assertion , $sbit number of bit inside vector
+          begin
+            b_REQ  = i;
+            #10;
+            c_ACK  = i;
+            #10;
+          end
+        #700;
+        $display("final number of succeed assertion is %0d",count);
+        $stop;
+      end
+    end
+
+  else
+    begin
+      initial begin
+        $dumpfile("waveform.vcd");
+        $dumpvars;
+        a_clk  = 0;
+        b_REQ  = 0;
+        c_ACK  = 0;
+        #10;
+        for(int i=0; i <4;i++)
+          begin
+            b_REQ  = i;
+            c_ACK  = i;
+            #10;
+          end
+        #500;
+        $stop;
+      end
+    end
+
+
+
+  property VRES (N);
+    $rose(b_REQ[N]) |=> c_ACK[N];
+  endproperty
+  genvar i;
+  generate
+    for (i=0; i<$bits(c_ACK); i=i+1)
+      begin :genvres
+        A1 : assert property (VRES(i))
+          begin
+        $display ("\033[32m assertion passed @%0t", $time);
+        count++;
+          end
+            else
+          $display ("\033[31m assertion failed @%0t", $time);
+      end
+  endgenerate
+
+endmodule
+          
+          // generate statment
+
+/*
+what is used for?
+1- conditional 
+2- multiple
+
+what is the flavors for it?
+1-if/else
+2-case
+3-for
+
+note: for loop requries genvar i
+
+note: for conditional we use if(parameter) we do not need to write
+generate and endgenerate
+
+generate can has
+
+Modules, primitives, variables, nets, tasks, functions, continuous assignments, initial blocks and
+always blocks, assertions and properties
+
+
+where it takes place?
+
+compilaition / elaboration / simulation time / run time
+code            parameters    constants         variables
+
+*/
