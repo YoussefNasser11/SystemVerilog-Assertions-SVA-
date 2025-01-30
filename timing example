@@ -1,0 +1,81 @@
+/*
+Req then 10 ns later ack 
+ack is high as req is high for unknown time
+when req is low , ack becomes low after 50 ns
+*/
+
+module protocol_tb;
+  // Signals declaration
+  logic clk;
+  logic req;
+  logic ack;
+  
+  // parameters
+  parameter clk_period = 10;
+  // Clock generation
+  initial begin
+    clk = 0;
+    forever #(clk_period/2) clk = ~clk;  // 100MHz clock
+  end
+
+  
+  // Properties and assertions for the protocol
+  
+// First sequence: req rise to ack rise timing (10ns)
+sequence req_to_ack_rise;
+    $rose(req) ##1 $rose(ack);
+endsequence
+
+// Second sequence: ack stays high while req is high
+sequence ack_follows_req;
+  ack throughout (req[*0:$] ##1 !req);  // Stay high until req falls
+endsequence
+
+// Third sequence: req fall to ack fall timing (50ns)
+sequence req_to_ack_fall;
+    $fell(req) ##5 $fell(ack);
+endsequence
+
+// Combine them in a way that waits for events to happen
+property check_complete_protocol;
+    @(posedge clk)
+    req_to_ack_rise |-> 
+        ack_follows_req ##0 req_to_ack_fall;
+endproperty
+
+assert property(check_complete_protocol) 
+  $display("success y joe"); else 
+    $error("Protocol violation detected!");
+  
+  initial 
+    begin
+      // Initialize signals
+      req = 0;
+      ack = 0;
+
+      #clk_period;
+      req = 1;
+
+      #clk_period;
+      ack = 1;
+
+      #(clk_period * $urandom_range(10,200)); 
+
+      req = 0;
+      #(clk_period*5);
+      ack = 0;
+
+      #(clk_period*10);
+
+
+      $finish;
+    end
+  
+  // Optional: Monitor block for debug
+  initial begin
+    $monitor("Time=%0t req=%0b ack=%0b", $time, req, ack);
+    $dumpfile("waveform.vcd");
+        $dumpvars;
+  end
+
+endmodule
