@@ -1,0 +1,76 @@
+module Assertion_synchronous;
+
+  logic A,B,C,D,CLR;
+  bit clk;
+
+  always #5 clk = ~clk;
+
+  /*
+    For example, if we observe A ##1 B && CLR ##1 !C then the property is deemed to have passed on the cycle where CLR occurre
+    */
+  initial begin
+    A = 0;
+    B = 0;
+    C = 0;
+    D = 0;
+    CLR  = 1;
+    #10; 
+    A = 1;
+    CLR  = 0;
+    #10;
+    B = 1;
+    #10;
+    C = 1;
+    #10;
+    D = 1;
+    #100;
+    $stop;
+  end
+
+  property happy_scr;
+    @(posedge clk)
+    //     A |=> sync_accept_on(CLR) (B ##1 C ##1 D);
+    A |=> sync_reject_on(CLR) (B ##1 C ##1 D);
+  endproperty
+
+  ABORT_PASS_ON_CLR: assert property (happy_scr)
+    $display("Passed [%0t]",$time);
+    else
+      $display("FAIL [%0t]",$time);
+
+
+    endmodule
+
+
+    
+    /*
+
+Syncronus Signals 
+
+
+A |=> sync_accept_on(CLR) (B ##1 C ##1 D);
+if CLR = 1 in the next clock cycle of A when it becomes A = 1
+THE ASSERTION will pass ingoring values of B , C , D
+if CLR = 0 in the next clock cycle of A 
+the assertion will depened on the values of B , C ,D
+to devided if it pass or fail
+
+=========================================================================
+=========================================================================
+
+A |=> sync_reject_on(CLR) (B ##1 C ##1 D);
+
+if CLR = 1 in the next clock cycle of A when it becomes A = 1
+IT WILL FAILL THE ASSERTIONS ignoring values of B,C,D
+
+if CLR = 0 in the next clock cycle of A 
+the assertion will depened on the values of B , C ,D
+to devided if it pass or fail
+
+=========================================================================
+=========================================================================
+Important Note!!
+
+There are also asynchronous forms of these, accept_on and reject_on
+
+*/
