@@ -1,0 +1,98 @@
+module complex_2_simple;
+
+  bit a_clk;
+  bit b_REQ1,c_REQ2,d_Valid;
+
+
+  initial repeat(72) #5 a_clk = ~ a_clk;
+
+  default clocking my_clk @(posedge a_clk);
+  endclocking
+
+  initial begin
+    $dumpfile("waveform.vcd");
+    $dumpvars;
+  end
+
+  initial begin
+    // WE WILL NOT control @5ns because clock start with 0 not 1
+
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_0_1; // 1.. @ 15ns
+    
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b1_0_1; // 2.. @ 25ns
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b1_0_1; // 3.. @ 35ns
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b1_0_1; // 4.. @ 45ns
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b1_0_1; // 5.. @ 55ns
+    
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_1_1; // 6.. @ 65ns
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_1_1; // 7.. @ 75ns
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_1_1; // 8.. @ 85ns  
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_1_1; // 9.. @ 95ns  
+    
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_0_0; // 10.. @ 105ns 
+    
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b1_1_0; // 11.. @ 115ns
+    
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b1_0_1; // 12.. @ 125ns 
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b1_0_1; // 13.. @ 135ns 
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b1_0_1; // 14.. @ 145ns 
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b1_0_1; // 15.. @ 155ns 
+    
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_0_0; // 16.. @ 165ns 
+    
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_1_1; // 17.. @ 175ns 
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_1_1; // 18.. @ 185ns 
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_1_1; // 19.. @ 195ns 
+    
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b1_0_0; // 20.. @ 205ns 
+    
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_0_0; // 21.. @ 215ns 
+    
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_1_1; // 22.. @ 225ns 
+    
+    @(negedge a_clk); {b_REQ1,c_REQ2,d_Valid}  <= 3'b0_0_0; // 23.. @ 235ns 
+    
+  end
+
+  property NO_REQS_2GTHER;
+    ( @(posedge a_clk iff d_Valid)
+     not(b_REQ1 && c_REQ2));
+  endproperty
+
+  property CHK_REQ_LEN (REQ, clock, Valid, int NUM_CYC);
+    ( @(posedge a_clk iff d_Valid)
+     ( !REQ ##1 REQ |=> REQ[*NUM_CYC-1] ##1 !REQ ));
+  endproperty
+
+
+  sequence REQ_N_CYC(REQ, int N);
+    REQ[*N];
+  endsequence
+
+  property R2_FOLLOWS_R1;
+    ( @(posedge a_clk iff d_Valid)
+     REQ_N_CYC(b_REQ1, 4) |=> REQ_N_CYC(c_REQ2, 4));
+  endproperty
+
+
+  CHK_REQ1_LEN:assert property (CHK_REQ_LEN(b_REQ1, a_clk, d_Valid , 4))
+    $info ("\033[32m ZZZZZ CHK_REQ1_LEN passed @%0t and %0m LENGTH OF REQ2", $time);
+  else
+    $error ("\033[31m  CHK_REQ1_LEN failed @%0t", $time);
+
+  CHK_REQ2_LEN:assert property (CHK_REQ_LEN(c_REQ2, a_clk, d_Valid , 4))
+    $info ("\033[32m CHK_REQ2_LEN passed @%0t and %0m LENGTH OF REQ2", $time);
+  else
+    $error ("\033[31m  CHK_REQ2_LEN failed @%0t", $time); 
+
+  REQ1_then_REQ2:assert property (R2_FOLLOWS_R1)
+    $info ("\033[32m REQ1_then_REQ2 passed @%0t and %0m REQUEST1 THEN REQUEST 2", $time);
+  else
+    $error ("\033[31m  REQ1_then_REQ2 failed @%0t", $time);
+
+  b_REQ1_2_FORBIDDN:assert property (NO_REQS_2GTHER)
+    $info ("\033[33m NO_REQS_2GTHER passed @%0t and %0m NO REQ1,2 Together", $time);
+  else
+    $error ("\033[31m  NO_REQS_2GTHER failed @%0t", $time);
+
+endmodule
